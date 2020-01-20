@@ -53,7 +53,7 @@ class Pipeline:
 
         for train_start, train_end, test_start, test_end in [
             (date_1, date_2, date_2, date_3),
-            (date_1, date_3, date_3, date_4),
+            # (date_1, date_3, date_3, date_4),
             # (date_1, date_4, date_4, date_5)
         ]:
             print('Calculating train and test datasets')
@@ -101,8 +101,24 @@ class Pipeline:
 
         print(summaries)
 
+        return model
+
+    def create_submission(self, df: pd.DataFrame, model: Any):
+        columns = list(df.columns)
+        columns.remove('timestamp')
+        columns.remove('row_id')
+
+        predictions = model.predict(df[columns])
+
+        with open('submission.txt', 'w+') as f:
+            f.write('row_id,meter_reading\n')
+            for row_id, prediction in zip(df['row_id'], predictions):
+                f.write(f'{row_id},{prediction}\n')
+
 
 if __name__ == '__main__':
     pipeline = Pipeline()
-    pipeline.run(df=pd.read_csv('../resources/train.csv', nrows=10000000),
-                 model=RandomForestRegressor(n_estimators=4))
+    model = pipeline.run(df=pd.read_csv('../resources/train.csv'),
+                         model=RandomForestRegressor(n_estimators=10))
+
+    pipeline.create_submission(df=pd.read_csv('../resources/test.csv'), model=model)
