@@ -1,7 +1,6 @@
 from typing import Any
 
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -19,15 +18,11 @@ class Model(nn.Module):
         return super().__call__(*input, **kwargs)
 
     def forward(self, input: Tensor):
-        x, (h_n, c_n) = self.lstm(input)
+        x, (_, _) = self.lstm(input)  # Output of LSTM is of the structure (outs, (h_n, c_n)), we ignore the two latter
         x = x.view(-1, 64)
         x = self.fc(x)
 
         return x
-
-
-def squeeze_information_from_group(group: pd.DataFrame) -> None:
-    print(group['meter_reading'])
 
 
 def custom_loss(inputs, targets):
@@ -35,25 +30,22 @@ def custom_loss(inputs, targets):
 
 
 if __name__ == '__main__':
-    # df = pd.read_csv('resources/train.csv', nrows=10000)
-    # df.groupby(['building_id', 'meter']).apply(squeeze_information_from_group)
-
     model = Model()
     data = np.array([[1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]])
-    tensor = Tensor(data).view(-1, 1, 4)
+    tensor = torch.from_numpy(data).view(-1, 1, 4).float()
 
     loss_function = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
+
+    print(model(tensor))
 
     for epoch in range(1000):
         model.zero_grad()
 
         output = model(tensor)
         output = output.view(-1)
-        print(output)
 
-        # loss = loss_function(output, Tensor([1.0, 1.0, 1.0]))
-        loss = custom_loss(output, Tensor([10.0, 10.0, 10.0]))
+        loss = custom_loss(output, torch.tensor([10.0, 10.0, 10.0]))
         loss.backward()
         optimizer.step()
 
